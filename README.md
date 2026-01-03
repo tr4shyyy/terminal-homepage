@@ -1,62 +1,38 @@
-<h3 align="center">
-  <img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/logos/exports/1544x1544_circle.png" width="100" alt="Logo"/><br/>
-  <img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/misc/transparent.png" height="30" width="0px"/>
-  Catppuccin <a href="https://pivoshenko.github.io/catppuccin-startpage">Startpage</a>
-  <img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/misc/transparent.png" height="30" width="0px"/>
-</h3>
+
 
 <p align="center">
-  <a href="https://github.com/pivoshenko/catppuccin-startpage/stargazers">
-    <img src="https://img.shields.io/github/stars/pivoshenko/catppuccin-startpage?style=for-the-badge&logo=starship&color=c6a0f6&logoColor=cad3f5&labelColor=302d41">
-  </a>
-  <a href="https://github.com/pivoshenko/catppuccin-startpage/issues">
-    <img src="https://img.shields.io/github/issues/pivoshenko/catppuccin-startpage?style=for-the-badge&logo=gitbook&color=ed8796&logoColor=cad3f5&labelColor=302d41">
-  </a>
-  <a href="https://github.com/pivoshenko/catppuccin-startpage/contributors">
-    <img src="https://img.shields.io/github/contributors/pivoshenko/catppuccin-startpage?style=for-the-badge&logo=github&color=a6da95&logoColor=cad3f5&labelColor=302d41">
-  </a>
-  <a href="https://github.com/pivoshenko/catppuccin-startpage">
-      <img src="https://img.shields.io/github/repo-size/pivoshenko/catppuccin-startpage?style=for-the-badge&logo=hackthebox&color=8aadf4&logoColor=cad3f5&labelColor=302d41">
-  </a>
+  <img src="terminal_preview.gif"/>
 </p>
 
-<p align="center">
-  <a href="https://stand-with-ukraine.pp.ua">
-    <img alt="StandWithUkraine" src="https://img.shields.io/badge/Support-Ukraine-FFC93C?style=for-the-badge&logoColor=cad3f5&labelColor=07689F">
-  </a>
-</p>
+# Overview
 
-<p align="center">
-  <img src="assets/preview.png"/>
-</p>
+A terminal-first startpage for fast navigation. The landing terminal provides autocomplete, link discovery, and command shortcuts, while the links are rendered as a readable terminal list grouped by tabs and categories.
 
-# 🪴 Overview
-
-A minimalistic and customisable startpage featuring the [**Catppuccin palettes**](https://catppuccin.com/palette). Designed for both aesthetics and functionality, with seamless hosting on GitHub Pages. This startpage is based on [`dawn`](https://github.com/b-coimbra/dawn), which offers additional functionality. I have refined the page to match my [`dotfiles`](https://github.com/pivoshenko/dotfiles); feel free to explore them as well.
-
-## 🧠 Main Principles
+## Main Principles
 
 - Minimalism in all aspects
 - Consistency throughout the user interface and codebase
 - Simplicity in design and configuration
 - Unified style and reduced visual noise
 
-## 🎨 Supported Palettes
+## Supported Palettes
 
 - Latte
 - Frappé
 - Macchiato
 - Mocha
 
-## ⭐ Features
+## Features
 
 - Automatic theme switching based on system settings (light/dark mode)
-- Customisable startpage / bookmarks manager
+- Terminal-first navigation with autocomplete and commands
+- Link list rendered inside the terminal, grouped by tabs and categories
 - Search bar with multiple engines
-- Weather widget
+- Weather widget and `/weather` command (12-hour + 5-day forecast)
 - Clock widget with 12/24-hour format and multiple time zones support
+- Terminal commands: `/list`, `/home`, `/help`
 
-# 🪵 Usage
+# Usage
 
 1. Fork this repository and clone it
 2. Optionally remove the `.github` directory, as it contains only PR templates, issue labels, etc., that are linked to this repository
@@ -65,13 +41,11 @@ A minimalistic and customisable startpage featuring the [**Catppuccin palettes**
    - Set your location for the weather widget
    - Update the number of tabs and their banners
    - Update bookmarks and quick links for those you use most
+4. Add your OpenWeather API key:
+   - Copy `src/config/weather.key.example.js` to `src/config/weather.key.js`
+   - Set `window.WEATHER_API_KEY` to your key (this file is gitignored)
 
-> [!TIP]
-> You can find icons for your bookmarks using [`tabler-icons`](https://tabler.io/icons).
->
-> To reduce icon loading times, you may install the icon [font](src/fonts) locally and activate the option `"localIcons": true` in the configuration to disable remote styles.
->
-> To improve privacy and loading performance, you can now use local fonts instead of Google Fonts CDN by setting `"localFonts": true` in your configuration. This feature stores all required fonts (Roboto, Nunito, Raleway, and Material Icons) locally in the repository, eliminating external requests to Google's servers.
+
 
 ### As Homepage
 
@@ -85,28 +59,6 @@ You can use different add-ons or extensions for this.
 
 - If you use Firefox-based browsers: [Custom New Tab Page](https://addons.mozilla.org/en-US/firefox/addon/custom-new-tab-page/?src=search) and make sure to enable "Force links to open in the top frame (experimental)" in the extension's preferences page
 - If you use Chromium-based browsers (Brave / Chrome): [Custom New Tab URL](https://chrome.google.com/webstore/detail/custom-new-tab-url/mmjbdbjnoablegbkcklggeknkfcjkjia)
-
-### 🔎 Search
-
-<p align="center">
-  <img src="assets/preview._searchbar.png"/>
-</p>
-
-The search dialogue allows you to display a search bar with various search engines defined in the configuration. To open the search dialogue, simply press `s` and type your query or URL to jump to it seamlessly.
-
-To select search engine, simply prefix the query with the corresponding `!<id>`. By default, the defined search engines are:
-
-- `!p`: PerplexityAI
-- `!g`: Google
-- `!d`: DuckDuckGo
-
-The default search engine can be set in the `userconfig.js` file (use the engine ID without the `!` prefix):
-
-```javascript
-search: {
-  default: "d"
-}
-```
 
 ### ⏰ Clock
 
@@ -138,24 +90,7 @@ additionalClocks: [
 
 For full documentation of clock format options, [see](docs/CLOCK.md).
 
-## 🖼️ Available Banners
-
-| banner_01                                           | banner_02                                           | banner_03                                           | banner_04                                           |
-| --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
-| <img src="src/img/banners/banner_01.gif" width=175> | <img src="src/img/banners/banner_02.gif" width=175> | <img src="src/img/banners/banner_03.gif" width=175> | <img src="src/img/banners/banner_04.gif" width=175> |
-
-| banner_05                                           | banner_06                                           | banner_07                                           | banner_08                                           |
-| --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
-| <img src="src/img/banners/banner_05.gif" width=175> | <img src="src/img/banners/banner_06.gif" width=175> | <img src="src/img/banners/banner_07.gif" width=175> | <img src="src/img/banners/banner_08.gif" width=175> |
-
-| banner_09                                           | banner_10                                           | banner_11                                           | banner_12                                           |
-| --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
-| <img src="src/img/banners/banner_09.gif" width=175> | <img src="src/img/banners/banner_10.gif" width=175> | <img src="src/img/banners/banner_11.gif" width=175> | <img src="src/img/banners/banner_12.gif" width=175> |
-
-| banner_13                                           | banner_14                                           | banner_15                                           | banner_16                                           |
-| --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
-| <img src="src/img/banners/banner_13.gif" width=175> | <img src="src/img/banners/banner_14.gif" width=175> | <img src="src/img/banners/banner_15.gif" width=175> | <img src="src/img/banners/banner_16.gif" width=175> |
-
-| banner_17                                           | banner_18                                           |
-| --------------------------------------------------- | --------------------------------------------------- |
-| <img src="src/img/banners/banner_17.gif" width=175> | <img src="src/img/banners/banner_18.gif" width=175> |
+<h3 align="center">
+  <img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/logos/exports/1544x1544_circle.png" width="50" alt="Logo"/><br/>
+  <img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/misc/transparent.png" height="30" width="0px"/>
+</h3>
