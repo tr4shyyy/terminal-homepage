@@ -12,3 +12,4 @@
 
 # secrets
 src/config/weather.key.js
+userconfig.js
