@@ -74,7 +74,9 @@ class Category extends Component {
    * @returns {string} CSS style attribute string
    */
   static getBackgroundStyle(url) {
-    return `style="background-image: url(${url}); background-repeat: no-repeat; background-size: contain;"`;
+    return url
+      ? `style="background-image: url(${url});"`
+      : "";
   }
 
   /**
@@ -86,8 +88,8 @@ class Category extends Component {
     return `
       ${tabs
         .map(({ name, background_url }, index) => {
-          return `<ul class="${name}" ${Category.getBackgroundStyle(background_url)} ${index == 0 ? "active" : ""}>
-            <div class="banner"></div>
+          return `<ul class="${name}" ${index == 0 ? "active" : ""}>
+            <div class="banner" ${Category.getBackgroundStyle(background_url)}></div>
             <div class="links">${Links.getAll(name, tabs)}</div>
           </ul>`;
         })
@@ -101,7 +103,15 @@ class Category extends Component {
  */
 class Tabs extends Component {
   // CSS selector references for DOM elements
-  refs = {};
+  refs = {
+    landing: "#landing",
+    landingEnter: "[data-landing-enter]",
+    landingInput: "[data-landing-input]",
+    landingError: "[data-landing-error]",
+    landingWeather: "[data-landing-weather]",
+    landingGhost: "[data-landing-ghost]",
+    landingOutput: "[data-landing-output]",
+  };
 
   /**
    * Initialise the tabs component with configuration
@@ -119,6 +129,7 @@ class Tabs extends Component {
     return [
       this.getIconResource('material'),
       this.resources.icons.tabler,
+      '<link rel="stylesheet" href="src/fonts/jetbrains-mono-local.css">',
       this.getFontResource('roboto'),
       this.getFontResource('raleway'),
       this.getLibraryResource('awoo'),
@@ -131,6 +142,301 @@ class Tabs extends Component {
    */
   style() {
     return `
+      #links {
+          position: relative;
+          width: 100%;
+          height: 100%;
+      }
+
+      #landing {
+          --landing-accent: #2BE491;
+          --landing-accent-soft: #63C5EA;
+          --landing-glow: #CF8EF4;
+          --landing-ink: #F9F9F9;
+          position: absolute;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          padding: 6vh 6vw;
+          background: radial-gradient(circle at top, #3a4253 0%, #2a3140 55%, #1b202a 100%);
+          color: var(--landing-ink);
+          z-index: 10;
+          transition: opacity 0.35s ease, transform 0.35s ease;
+      }
+
+      #landing::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background:
+            linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.3)),
+            repeating-linear-gradient(
+              0deg,
+              rgba(255, 255, 255, 0.03) 0px,
+              rgba(255, 255, 255, 0.03) 1px,
+              rgba(0, 0, 0, 0.02) 2px,
+              rgba(0, 0, 0, 0.02) 3px
+            );
+          mix-blend-mode: screen;
+          pointer-events: none;
+      }
+
+      #landing::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: url("src/img/landing_rain.gif") center / cover no-repeat;
+          opacity: 0.3;
+          pointer-events: none;
+      }
+
+      #landing.hidden {
+          opacity: 0;
+          transform: translateY(-12px);
+          pointer-events: none;
+      }
+
+      #landing.hidden::before {
+          opacity: 0;
+      }
+
+      #landing:not(.hidden) ~ #panels {
+          filter: blur(12px) saturate(0.8);
+          transform: scale(0.985);
+          opacity: 0.5;
+          pointer-events: none;
+      }
+
+      .terminal {
+          position: relative;
+          z-index: 1;
+          width: min(780px, 92vw);
+          background: rgba(34, 40, 52, 0.96);
+          border-radius: 0;
+          border: 1px solid rgba(249, 249, 249, 0.18);
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 35px rgba(0, 0, 0, 0.35);
+          padding: 26px 28px 30px;
+          font-family: 'JetBrains Mono', 'Nunito', 'Raleway', monospace;
+      }
+
+      .terminal-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 18px;
+      }
+
+      .terminal-dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 999px;
+          background: #FA5AA4;
+          box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+      }
+
+      .terminal-dot:nth-child(2) {
+          background: #FA946E;
+      }
+
+      .terminal-dot:nth-child(3) {
+          background: #2BE491;
+      }
+
+      .terminal-title {
+          margin-left: auto;
+          color: #89CCF7;
+          font-size: 12px;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+      }
+
+      .terminal-body {
+          display: grid;
+          gap: 8px;
+          font-size: 15px;
+          letter-spacing: 0.04em;
+      }
+
+      .terminal-output {
+          display: grid;
+          gap: 8px;
+      }
+
+      .terminal-output.links-view {
+          max-height: min(60vh, 460px);
+          overflow: auto;
+          padding-right: 6px;
+      }
+
+      .line {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 6px;
+          color: ${CONFIG.palette.text};
+      }
+
+      .prompt {
+          color: var(--landing-accent);
+          font-weight: 700;
+      }
+
+      .path {
+          color: var(--landing-accent-soft);
+      }
+
+      .command {
+          color: #FA946E;
+          font-weight: 600;
+      }
+
+      .output {
+          color: #89CCF7;
+      }
+
+      .output.section {
+          color: #F9F9F9;
+          font-weight: 700;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          margin-top: 14px;
+      }
+
+      .output.subsection {
+          color: #63C5EA;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          margin-top: 6px;
+      }
+
+      .output.link {
+          color: #D4E7F6;
+      }
+
+      .output.link a {
+          color: inherit;
+          text-decoration: none;
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 6px;
+      }
+
+      .output.link a:hover .link-name {
+          text-decoration: underline;
+      }
+
+      .output.link .link-name {
+          color: var(--landing-accent);
+          font-weight: 600;
+      }
+
+      .output.link .link-url {
+          color: rgba(249, 249, 249, 0.55);
+      }
+
+      .output.error {
+          color: #FA5AA4;
+      }
+
+      .terminal-cta {
+          margin-top: 14px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          color: #89CCF7;
+          font-size: 13px;
+      }
+
+      .terminal-input {
+          position: relative;
+          z-index: 2;
+          flex: 1;
+          min-width: 120px;
+          width: 100%;
+          background: transparent;
+          border: 0;
+          outline: 0;
+          margin: 0;
+          padding: 0;
+          color: #F9F9F9;
+          font-family: 'JetBrains Mono', 'Nunito', 'Raleway', monospace;
+          font-size: 15px;
+          font-weight: 500;
+          letter-spacing: 0.04em;
+          line-height: 1.4;
+          font-variant-ligatures: none;
+          font-feature-settings: "liga" 0;
+      }
+
+      .terminal-input-wrap {
+          position: relative;
+          display: flex;
+          align-items: stretch;
+          flex: 1;
+          min-width: 120px;
+      }
+
+      .terminal-input-ghost {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          color: rgba(249, 249, 249, 0.45);
+          background: transparent;
+          border: 0;
+          outline: 0;
+          pointer-events: none;
+          user-select: none;
+          caret-color: transparent;
+      }
+
+      .terminal-input::placeholder {
+          color: #89CCF7;
+          opacity: 0.7;
+      }
+
+      .enter-button {
+          background: transparent;
+          border: 1px solid rgba(249, 249, 249, 0.2);
+          color: #2BE491;
+          padding: 6px 14px;
+          border-radius: 999px;
+          font-weight: 700;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: all 0.2s ease;
+      }
+
+      .enter-button:hover {
+          background: rgba(255, 255, 255, 0.08);
+          box-shadow: 0 0 18px rgba(255, 255, 255, 0.12);
+      }
+
+      .cursor {
+          width: 10px;
+          height: 18px;
+          background: #2BE491;
+          margin-left: 4px;
+          animation: blink 1s steps(2, start) infinite;
+      }
+
+      @keyframes blink {
+          to {
+              opacity: 0;
+          }
+      }
+
+      @media (max-width: 700px) {
+          .terminal {
+              padding: 22px 20px 24px;
+          }
+
+          .terminal-body {
+              font-size: 13px;
+          }
+      }
+
       status-bar {
           bottom: -70px;
           height: 32px;
@@ -139,8 +445,7 @@ class Tabs extends Component {
           box-shadow: 0 10px 20px rgba(0, 0, 0, .25);
       }
 
-      #panels, #panels ul,
-      #panels .links {
+      #panels, #panels ul {
           position: absolute;
       }
 
@@ -160,6 +465,7 @@ class Tabs extends Component {
           margin: auto;
           box-shadow: 0 5px 10px rgba(0, 0, 0, .2);
           background: ${CONFIG.palette.base};
+          transition: transform 0.35s ease, filter 0.35s ease, opacity 0.35s ease;
       }
 
       .categories {
@@ -179,6 +485,20 @@ class Tabs extends Component {
           background: ${CONFIG.palette.base} url("../img/bg-1.gif") repeat left;
           transition: all .6s;
           # animation: scroll 25s ease-in-out infinite;
+          display: grid;
+          grid-template-columns: max-content 1fr;
+      }
+
+      .categories .banner {
+          position: relative;
+          height: 100%;
+          aspect-ratio: 1 / 1;
+          width: auto;
+          background-repeat: no-repeat;
+          background-position: center;
+          background-size: cover;
+          align-self: stretch;
+          justify-self: start;
       }
 
       @keyframes scroll {
@@ -216,12 +536,13 @@ class Tabs extends Component {
       }
 
       .categories .links {
-          right: 0;
-          width: 70%;
+          position: relative;
           height: 100%;
           background: ${CONFIG.palette.base};
           padding: 5%;
+          display: flex;
           flex-wrap: wrap;
+          align-content: flex-start;
       }
 
       .categories .links li {
@@ -252,32 +573,6 @@ class Tabs extends Component {
           transform: translate(0, 4px);
           box-shadow: 0 0 rgba(0, 0, 0, 0.25), 0 0 0 rgba(0, 0, 0, .5), 0 -0px 5px rgba(0, 0, 0, .1);
           color: var(--flavour);
-      }
-
-      .categories ul::after {
-          content: attr(class);
-          position: absolute;
-          display: flex;
-          text-transform: uppercase;
-          overflow-wrap: break-word;
-          width: 25px;
-          height: 250px;
-          padding: 1em;
-          margin: auto;
-          border-radius: 5px;
-          box-shadow: inset 0 0 0 2px var(--flavour);
-          left: calc(15% - 42.5px);
-          bottom: 0;
-          top: 0;
-          background: linear-gradient(to top, rgb(50 48 47 / 90%), transparent);
-          color: var(--flavour);
-          letter-spacing: 1px;
-          font: 500 30px 'Nunito', sans-serif;
-          text-align: center;
-          flex-wrap: wrap;
-          word-break: break-all;
-          align-items: center;
-          backdrop-filter: blur(3px);
       }
 
       .categories .links li:not(:last-child) {
@@ -337,6 +632,42 @@ class Tabs extends Component {
   template() {
     return `
       <div id="links" class="-">
+        <div id="landing">
+          <div class="terminal">
+            <div class="terminal-header">
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+              <span class="terminal-title">/home/start</span>
+            </div>
+            <div class="terminal-body">
+              <div class="terminal-output" data-landing-output>
+                <div class="line">
+                  <span class="prompt">guest@launchpad</span>
+                  <span class="path">:~</span>$
+                  <span class="command">boot --profile links</span>
+                </div>
+                <div class="line output">Mounting quicklinks... ok</div>
+                <div class="line output" data-landing-weather>Fetching weather...</div>
+                <div class="line output">Session ready. Awaiting input.</div>
+                <div class="line terminal-cta">
+                  <button class="enter-button" type="button" data-landing-enter>enter</button>
+                  <span>Press Enter or click to continue</span>
+                </div>
+              </div>
+              <div class="line output error" data-landing-error hidden></div>
+              <div class="line">
+                <span class="prompt">guest@launchpad</span>
+                <span class="path">:~</span>$
+                <span class="terminal-input-wrap">
+                  <input class="terminal-input terminal-input-ghost" type="text" tabindex="-1" aria-hidden="true" data-landing-ghost />
+                  <input class="terminal-input" type="text" autocomplete="off" spellcheck="false" placeholder="type a command..." data-landing-input />
+                </span>
+                <span class="cursor"></span>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div id="panels">
           <div class="categories">
@@ -353,6 +684,304 @@ class Tabs extends Component {
    * Component lifecycle callback when element is connected to DOM
    */
   connectedCallback() {
-    this.render();
+    this.render().then(() => this.setupLanding());
+  }
+
+  /**
+   * Configure landing page interactions and dismissal
+   */
+  setupLanding() {
+    const landing = this.refs.landing;
+    const enterButton = this.refs.landingEnter;
+    const input = this.refs.landingInput;
+    const errorLine = this.refs.landingError;
+    const weatherLine = this.refs.landingWeather;
+    const ghostInput = this.refs.landingGhost;
+    const terminalOutput = this.refs.landingOutput;
+
+    if (!landing || !enterButton || !input || !errorLine) return;
+
+    const landingLinks = (CONFIG.tabs || [])
+      .flatMap((tab) => tab.categories || [])
+      .flatMap((category) => category.links || [])
+      .filter((link) => link && link.url)
+      .map((link) => ({
+        name: link.name || "",
+        url: link.url,
+      }));
+
+    const shortcutCandidates = landingLinks
+      .flatMap((link) => {
+        const candidates = [];
+        if (link.name) {
+          const trimmedName = link.name.trim();
+          if (trimmedName) {
+            candidates.push({ label: trimmedName, url: link.url });
+          }
+        }
+        if (link.url) {
+          candidates.push({ label: link.url, url: link.url });
+        }
+        return candidates;
+      })
+      .map((candidate) => ({
+        ...candidate,
+        normalized: candidate.label.toLowerCase(),
+      }));
+
+    const normalizeUrl = (value) => {
+      const trimmed = value.trim();
+      if (!trimmed || /\s/.test(trimmed)) return null;
+
+      const hasScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed);
+      if (hasScheme) return trimmed;
+
+      if (/^about:[^\s]+/i.test(trimmed)) return trimmed;
+      if (/^(mailto|tel):[^\s]+/i.test(trimmed)) return trimmed;
+
+      const isLocalhost = /^localhost(?::\d+)?(\/|$)/i.test(trimmed);
+      const isIp = /^(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?(\/|$)/.test(trimmed);
+      const hasDot = trimmed.includes(".");
+
+      if (isLocalhost || isIp || hasDot) return `https://${trimmed}`;
+
+      return null;
+    };
+
+    const isAboutPage = (value) => /^about:[^\s]+/i.test(value.trim());
+
+    const getSearchUrl = (query) => {
+      const engines = CONFIG.search?.engines || {};
+      const defaultKey = CONFIG.search?.default || Object.keys(engines)[0];
+      const engine = engines[defaultKey];
+      if (!engine || !engine[0]) return null;
+      return `${engine[0]}${encodeURIComponent(query)}`;
+    };
+
+    const escapeHtml = (value) =>
+      value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    const buildLinksMarkup = () => {
+      const tabs = CONFIG.tabs || [];
+      if (!tabs.length) {
+        return `<div class="line output">No links configured.</div>`;
+      }
+
+      const sections = tabs.flatMap((tab) => {
+        const tabName = escapeHtml(tab.name || "links");
+        const categories = tab.categories || [];
+        const lines = [];
+        lines.push(`<div class="line output section">${tabName}</div>`);
+
+        categories.forEach((category) => {
+          const categoryName = escapeHtml(category.name || "section");
+          lines.push(`<div class="line output subsection">${categoryName}</div>`);
+          const links = category.links || [];
+          links.forEach((link) => {
+            if (!link || !link.url) return;
+            const name = escapeHtml(link.name || link.url);
+            const url = escapeHtml(link.url);
+            lines.push(
+              `<div class="line output link"><a href="${url}"><span class="link-name">${name}</span><span class="link-url">-> ${url}</span></a></div>`
+            );
+          });
+        });
+
+        return lines;
+      });
+
+      return sections.join("");
+    };
+
+    const showLinksView = () => {
+      if (!terminalOutput) return;
+      terminalOutput.classList.add("links-view");
+      terminalOutput.innerHTML = buildLinksMarkup();
+      input.focus();
+      updateSuggestion();
+    };
+
+    const getShortcutUrl = (value) => {
+      const normalized = value.trim().toLowerCase();
+      if (!normalized) return null;
+      const match = shortcutCandidates.find((candidate) => candidate.normalized === normalized);
+      return match ? match.url : null;
+    };
+
+    const updateSuggestion = () => {
+      if (!ghostInput) return;
+
+      const rawValue = input.value;
+      const trimmed = rawValue.trim();
+      if (!trimmed || /\s/.test(rawValue)) {
+        ghostInput.hidden = true;
+        ghostInput.dataset.suggestion = "";
+        ghostInput.value = "";
+        return;
+      }
+
+      const normalized = trimmed.toLowerCase();
+      const match = shortcutCandidates.find((candidate) =>
+        candidate.normalized.startsWith(normalized)
+      );
+      if (!match || match.label.length <= trimmed.length) {
+        ghostInput.hidden = true;
+        ghostInput.dataset.suggestion = "";
+        ghostInput.value = "";
+        return;
+      }
+
+      ghostInput.hidden = false;
+      ghostInput.value = match.label;
+      ghostInput.dataset.suggestion = match.label;
+    };
+
+    const setLandingWeather = async () => {
+      if (!weatherLine) return;
+      const location = CONFIG.temperature?.location;
+      const scale = CONFIG.temperature?.scale || "C";
+      if (!location) return;
+
+      const convertToF = (celsius) => Math.round((celsius * 9) / 5 + 32);
+
+      try {
+        const weatherClient = new WeatherForecastClient(location);
+        const weather = await weatherClient.getWeather();
+        if (!weather || typeof weather.temperature !== "number") {
+          weatherLine.textContent = "Weather unavailable.";
+          return;
+        }
+
+        const temp = scale === "F" ? convertToF(weather.temperature) : weather.temperature;
+        const condition = weather.condition
+          ? `${weather.condition[0].toUpperCase()}${weather.condition.slice(1)}`
+          : "Unknown";
+
+        weatherLine.textContent = `Weather: ${temp}°${scale} ${condition} in ${location}.`;
+      } catch (error) {
+        weatherLine.textContent = "Weather unavailable.";
+      }
+    };
+
+    const dismiss = () => {
+      if (landing.classList.contains("hidden")) return;
+      landing.classList.add("hidden");
+      landing.setAttribute("aria-hidden", "true");
+      input.blur();
+    };
+
+    const showLanding = () => {
+      if (!landing.classList.contains("hidden")) {
+        input.focus();
+        updateSuggestion();
+        return;
+      }
+      landing.classList.remove("hidden");
+      landing.removeAttribute("aria-hidden");
+      input.focus();
+      updateSuggestion();
+    };
+
+    const isEditableTarget = (target) => {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
+    };
+
+    enterButton.addEventListener("click", () => {
+      showLinksView();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "`") return;
+      if (event.target && isEditableTarget(event.target)) {
+        if (!landing.classList.contains("hidden")) return;
+        if (event.target !== input && event.target !== ghostInput) return;
+      }
+      if (event.target?.shadow && event.target.shadow.activeElement) return;
+      event.preventDefault();
+      showLanding();
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Tab") {
+        event.preventDefault();
+        if (!event.shiftKey && ghostInput && !ghostInput.hidden) {
+          const completed = ghostInput.dataset.suggestion || "";
+          if (completed) {
+            input.value = completed;
+            input.setSelectionRange(input.value.length, input.value.length);
+            updateSuggestion();
+            return;
+          }
+        }
+
+        if (!landingLinks.length) return;
+
+        const currentValue = input.value.trim();
+        const currentIndex = landingLinks.findIndex((link) => link.url === currentValue);
+        const nextIndex = currentIndex === -1
+          ? (event.shiftKey ? landingLinks.length - 1 : 0)
+          : (currentIndex + (event.shiftKey ? -1 : 1) + landingLinks.length) % landingLinks.length;
+
+        input.value = landingLinks[nextIndex].url;
+        input.setSelectionRange(input.value.length, input.value.length);
+        updateSuggestion();
+        return;
+      }
+
+      if (event.key !== "Enter") return;
+
+      const value = input.value.trim();
+      errorLine.hidden = true;
+      errorLine.textContent = "";
+      if (!value) {
+        showLinksView();
+        return;
+      }
+
+      if (isAboutPage(value)) {
+        errorLine.textContent = `error: ${value} is a browser-only page. Press Ctrl+L, then paste to open it.`;
+        errorLine.hidden = false;
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(value).catch(() => {});
+        }
+        input.focus();
+        return;
+      }
+
+      const shortcutUrl = getShortcutUrl(value);
+      if (shortcutUrl) {
+        window.location.href = shortcutUrl;
+        return;
+      }
+
+      const url = normalizeUrl(value);
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+
+      const searchUrl = getSearchUrl(value);
+      if (searchUrl) {
+        window.location.href = searchUrl;
+      }
+    });
+
+    input.addEventListener("input", updateSuggestion);
+    input.addEventListener("focus", updateSuggestion);
+    input.addEventListener("blur", () => {
+      if (!suggestionLine) return;
+      suggestionLine.hidden = true;
+    });
+
+    landing.addEventListener("click", () => input.focus());
+    input.focus();
+    setLandingWeather();
+    updateSuggestion();
   }
 }

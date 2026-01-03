@@ -199,7 +199,8 @@ class Statusbar extends Component {
           background: ${CONFIG.palette.mantle};
           color: ${CONFIG.palette.green};
           cursor: pointer;
-          border-radius: 5px 15px 15px 5px;
+          border-radius: 8px;
+          padding: 4px;
       }
 
       .fastlink:hover {
@@ -207,7 +208,10 @@ class Statusbar extends Component {
       }
 
       .fastlink-icon {
-        width: 70%;
+        width: 100%;
+        height: 100%;
+        border-radius: 6px;
+        object-fit: cover;
       }
     `;
   }
@@ -221,7 +225,7 @@ class Statusbar extends Component {
         <div id="tabs">
             <cols>
                 <button class="+ fastlink">
-                  <img class="fastlink-icon" src="src/img/favicon.png"/>
+                  <img class="fastlink-icon" src="src/img/search.png"/>
                 </button>
                 <ul class="- indicator"></ul>
                 <div class="+ widgets col-end">

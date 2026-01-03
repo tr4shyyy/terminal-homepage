@@ -3,7 +3,7 @@
 // Define preferred palette for light and dark mode
 // Available themes: latte, frappe, mocha, macchiato
 const preferredLightTheme = latte;
-const preferredDarkTheme = mocha;
+const preferredDarkTheme = macchiato;
 
 let palette = initThemeSystem(preferredLightTheme, preferredDarkTheme);
 
@@ -143,22 +143,16 @@ const default_configuration = {
               icon_color: palette.green,
             },
             {
-              name: "stackoverflow",
-              url: "https://stackoverflow.com",
-              icon: "brand-stackoverflow",
+              name: "neptune",
+              url: "https://ui.neptune.ai",
+              icon: "circle-triangle",
               icon_color: palette.peach,
             },
             {
-              name: "duckdb",
-              url: "https://app.motherduck.com",
-              icon: "file-type-sql",
+              name: "stackoverflow",
+              url: "https://stackoverflow.com",
+              icon: "brand-stackoverflow",
               icon_color: palette.red,
-            },
-            {
-              name: "collab",
-              url: "https://colab.research.google.com",
-              icon: "notebook",
-              icon_color: palette.mauve,
             },
           ],
         },
@@ -253,8 +247,8 @@ const default_configuration = {
           name: "gaming",
           links: [
             {
-              name: "infiniteBacklog",
-              url: "https://infinitebacklog.net",
+              name: "IGN",
+              url: "https://www.ign.com/account/playlist/library",
               icon: "device-gamepad",
               icon_color: palette.green,
             },
@@ -316,4 +310,4 @@ const CONFIG = new Config(default_configuration, palette);
 
 const root = document.querySelector(":root");
 root.style.setProperty("--bg", palette.mantle);
-root.style.setProperty("--accent", palette.blue);
+root.style.setProperty("--accent", palette.green);

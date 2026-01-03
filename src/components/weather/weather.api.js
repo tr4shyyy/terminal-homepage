@@ -9,10 +9,9 @@ class WeatherForecastClient {
    */
   constructor(location) {
     // OpenWeatherMap API key for authentication
-    this.appId = "50a34e070dd5c09a99554b57ab7ea7e2";
+    this.appId = "e33e48a1a64413cd2aa6bde6517d502a";
     // Construct API URL with location and metric units
-    this.url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURI(location)}&units=metric&appid=${this.appId
-      }`;
+    this.url = `https://api.openweathermap.org/data/2.5/weather?lat=42.9956&lon=-71.4548&units=metric&appid=${this.appId}`;
   }
 
   /**
