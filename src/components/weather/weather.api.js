@@ -9,9 +9,12 @@ class WeatherForecastClient {
    */
   constructor(location) {
     // OpenWeatherMap API key for authentication
-    this.appId = "e33e48a1a64413cd2aa6bde6517d502a";
+    this.appId = window.WEATHER_API_KEY || "";
     // Construct API URL with location and metric units
-    this.url = `https://api.openweathermap.org/data/2.5/weather?lat=42.9956&lon=-71.4548&units=metric&appid=${this.appId}`;
+    this.latitude = 42.9956;
+    this.longitude = -71.4548;
+    this.url = `https://api.openweathermap.org/data/2.5/weather?lat=${this.latitude}&lon=${this.longitude}&units=metric&appid=${this.appId}`;
+    this.forecastUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${this.latitude}&lon=${this.longitude}&units=metric&appid=${this.appId}`;
   }
 
   /**
@@ -36,5 +39,22 @@ class WeatherForecastClient {
         };
       })
       .catch((err) => console.warn("Weather API returned an error:", err));
+  }
+
+  /**
+   * Fetch hourly and daily forecast data
+   * @returns {Promise<{timezoneOffset: number, hourly: Array, daily: Array}>}
+   */
+  async getForecast() {
+    return await fetch(this.forecastUrl)
+      .then((res) => res.json())
+      .then((json) => JSON.stringify(json))
+      .then((json) => JSON.parse(json))
+      .then((data) => ({
+        timezoneOffset: data.timezone_offset,
+        hourly: data.hourly || [],
+        daily: data.daily || [],
+      }))
+      .catch((err) => console.warn("Weather forecast API returned an error:", err));
   }
 }

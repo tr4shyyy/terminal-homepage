@@ -111,6 +111,8 @@ class Tabs extends Component {
     landingWeather: "[data-landing-weather]",
     landingGhost: "[data-landing-ghost]",
     landingOutput: "[data-landing-output]",
+    landingCaret: "[data-landing-caret]",
+    landingMeasure: "[data-landing-measure]",
   };
 
   /**
@@ -360,6 +362,7 @@ class Tabs extends Component {
           margin: 0;
           padding: 0;
           color: #F9F9F9;
+          caret-color: transparent;
           font-family: 'JetBrains Mono', 'Nunito', 'Raleway', monospace;
           font-size: 15px;
           font-weight: 500;
@@ -390,6 +393,40 @@ class Tabs extends Component {
           caret-color: transparent;
       }
 
+      .terminal-caret {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 9px;
+          height: 1.4em;
+          background: #2BE491;
+          z-index: 3;
+          animation: blink 1s steps(2, start) infinite;
+          pointer-events: none;
+      }
+
+      .terminal-measure {
+          position: absolute;
+          top: 0;
+          left: 0;
+          visibility: hidden;
+          white-space: pre;
+          pointer-events: none;
+          font-family: 'JetBrains Mono', 'Nunito', 'Raleway', monospace;
+          font-size: 15px;
+          font-weight: 500;
+          letter-spacing: 0.04em;
+          line-height: 1.4;
+          font-variant-ligatures: none;
+          font-feature-settings: "liga" 0;
+      }
+
+      @keyframes blink {
+          to {
+              opacity: 0;
+          }
+      }
+
       .terminal-input::placeholder {
           color: #89CCF7;
           opacity: 0.7;
@@ -411,20 +448,6 @@ class Tabs extends Component {
       .enter-button:hover {
           background: rgba(255, 255, 255, 0.08);
           box-shadow: 0 0 18px rgba(255, 255, 255, 0.12);
-      }
-
-      .cursor {
-          width: 10px;
-          height: 18px;
-          background: #2BE491;
-          margin-left: 4px;
-          animation: blink 1s steps(2, start) infinite;
-      }
-
-      @keyframes blink {
-          to {
-              opacity: 0;
-          }
       }
 
       @media (max-width: 700px) {
@@ -662,8 +685,9 @@ class Tabs extends Component {
                 <span class="terminal-input-wrap">
                   <input class="terminal-input terminal-input-ghost" type="text" tabindex="-1" aria-hidden="true" data-landing-ghost />
                   <input class="terminal-input" type="text" autocomplete="off" spellcheck="false" placeholder="type a command..." data-landing-input />
+                  <span class="terminal-caret" aria-hidden="true" data-landing-caret></span>
+                  <span class="terminal-measure" aria-hidden="true" data-landing-measure></span>
                 </span>
-                <span class="cursor"></span>
               </div>
             </div>
           </div>
@@ -692,12 +716,14 @@ class Tabs extends Component {
    */
   setupLanding() {
     const landing = this.refs.landing;
-    const enterButton = this.refs.landingEnter;
+    let enterButton = this.refs.landingEnter;
     const input = this.refs.landingInput;
     const errorLine = this.refs.landingError;
-    const weatherLine = this.refs.landingWeather;
+    let weatherLine = this.refs.landingWeather;
     const ghostInput = this.refs.landingGhost;
     const terminalOutput = this.refs.landingOutput;
+    const caret = this.refs.landingCaret;
+    const measure = this.refs.landingMeasure;
 
     if (!landing || !enterButton || !input || !errorLine) return;
 
@@ -798,12 +824,112 @@ class Tabs extends Component {
       return sections.join("");
     };
 
+    const bindEnterButton = (button) => {
+      if (!button || button.dataset?.landingBound) return;
+      button.dataset.landingBound = "true";
+      button.addEventListener("click", () => {
+        showLinksView();
+      });
+    };
+
     const showLinksView = () => {
       if (!terminalOutput) return;
       terminalOutput.classList.add("links-view");
       terminalOutput.innerHTML = buildLinksMarkup();
       input.focus();
       updateSuggestion();
+      updateCaret();
+    };
+
+    const defaultOutputHTML = terminalOutput ? terminalOutput.innerHTML : "";
+
+    const showHomeView = () => {
+      if (!terminalOutput) return;
+      terminalOutput.classList.remove("links-view");
+      terminalOutput.innerHTML = defaultOutputHTML;
+      enterButton = this.refs.landingEnter;
+      bindEnterButton(enterButton);
+      weatherLine = this.refs.landingWeather;
+      setLandingWeather();
+      input.focus();
+      updateSuggestion();
+      updateCaret();
+    };
+
+    const formatHourLabel = (timestamp, offsetSeconds) => {
+      const date = new Date((timestamp + offsetSeconds) * 1000);
+      const hours = date.getUTCHours().toString().padStart(2, "0");
+      const minutes = date.getUTCMinutes().toString().padStart(2, "0");
+      return `${hours}:${minutes}`;
+    };
+
+    const formatDayLabel = (timestamp, offsetSeconds) => {
+      const date = new Date((timestamp + offsetSeconds) * 1000);
+      const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      return weekdays[date.getUTCDay()];
+    };
+
+    const buildWeatherMarkup = (forecast, scale) => {
+      if (!forecast || !forecast.hourly?.length || !forecast.daily?.length) {
+        return `<div class="line output">Weather unavailable.</div>`;
+      }
+
+      const offsetSeconds = forecast.timezoneOffset || 0;
+      const now = Math.floor(Date.now() / 1000);
+      const todayKey = new Date((now + offsetSeconds) * 1000)
+        .toISOString()
+        .slice(0, 10);
+
+      const hourly = forecast.hourly
+        .filter((item) => {
+          const key = new Date((item.dt + offsetSeconds) * 1000)
+            .toISOString()
+            .slice(0, 10);
+          return key === todayKey;
+        })
+        .slice(0, 12);
+
+      const daily = forecast.daily.slice(1, 6);
+
+      const toDisplayTemp = (temp) => (
+        scale === "F" ? Math.round((temp * 9) / 5 + 32) : Math.round(temp)
+      );
+
+      const lines = [];
+      lines.push(`<div class="line output section">Weather</div>`);
+      lines.push(`<div class="line output">Next 12 hours</div>`);
+
+      hourly.forEach((item) => {
+        const label = formatHourLabel(item.dt, offsetSeconds);
+        const condition = item.weather?.[0]?.main || "Unknown";
+        const temp = toDisplayTemp(item.temp);
+        lines.push(
+          `<div class="line output link"><span class="link-name">${label}</span><span class="link-url">-> ${temp}°${scale} ${escapeHtml(condition)}</span></div>`
+        );
+      });
+
+      lines.push(`<div class="line output subsection">Next 5 days</div>`);
+      daily.forEach((item) => {
+        const label = formatDayLabel(item.dt, offsetSeconds);
+        const condition = item.weather?.[0]?.main || "Unknown";
+        const high = toDisplayTemp(item.temp?.max ?? item.temp?.day ?? 0);
+        const low = toDisplayTemp(item.temp?.min ?? item.temp?.night ?? 0);
+        lines.push(
+          `<div class="line output link"><span class="link-name">${label}</span><span class="link-url">-> ${high}/${low}°${scale} ${escapeHtml(condition)}</span></div>`
+        );
+      });
+
+      return lines.join("");
+    };
+
+    const buildHelpMarkup = () => {
+      const lines = [];
+      lines.push(`<div class="line output section">Commands</div>`);
+      lines.push(`<div class="line output link"><span class="link-name">/list</span><span class="link-url">-> Show all links in the terminal</span></div>`);
+      lines.push(`<div class="line output link"><span class="link-name">/home</span><span class="link-url">-> Return to the landing terminal</span></div>`);
+      lines.push(`<div class="line output link"><span class="link-name">/weather</span><span class="link-url">-> Show next 12 hours and 5-day forecast</span></div>`);
+      lines.push(`<div class="line output link"><span class="link-name">/help</span><span class="link-url">-> Show this command list</span></div>`);
+      return lines.join("");
     };
 
     const getShortcutUrl = (value) => {
@@ -841,8 +967,24 @@ class Tabs extends Component {
       ghostInput.dataset.suggestion = match.label;
     };
 
+    const updateCaret = () => {
+      if (!caret || !measure) return;
+      const value = input.value;
+      const selectionEnd = input.selectionEnd ?? value.length;
+      const textBeforeCaret = value.slice(0, selectionEnd);
+      measure.textContent = textBeforeCaret;
+      const width = measure.getBoundingClientRect().width;
+      const inputStyle = window.getComputedStyle(input);
+      const paddingLeft = parseFloat(inputStyle.paddingLeft) || 0;
+      const offset = Math.max(0, width - input.scrollLeft + paddingLeft);
+      caret.style.transform = `translateX(${offset}px)`;
+      caret.style.height = inputStyle.lineHeight;
+      caret.style.opacity = "1";
+    };
+
     const setLandingWeather = async () => {
-      if (!weatherLine) return;
+      const currentWeatherLine = this.refs.landingWeather;
+      if (!currentWeatherLine || typeof currentWeatherLine === "string") return;
       const location = CONFIG.temperature?.location;
       const scale = CONFIG.temperature?.scale || "C";
       if (!location) return;
@@ -853,7 +995,7 @@ class Tabs extends Component {
         const weatherClient = new WeatherForecastClient(location);
         const weather = await weatherClient.getWeather();
         if (!weather || typeof weather.temperature !== "number") {
-          weatherLine.textContent = "Weather unavailable.";
+          currentWeatherLine.textContent = "Weather unavailable.";
           return;
         }
 
@@ -862,9 +1004,9 @@ class Tabs extends Component {
           ? `${weather.condition[0].toUpperCase()}${weather.condition.slice(1)}`
           : "Unknown";
 
-        weatherLine.textContent = `Weather: ${temp}°${scale} ${condition} in ${location}.`;
+        currentWeatherLine.textContent = `Weather: ${temp}°${scale} ${condition} in ${location}.`;
       } catch (error) {
-        weatherLine.textContent = "Weather unavailable.";
+        currentWeatherLine.textContent = "Weather unavailable.";
       }
     };
 
@@ -879,12 +1021,14 @@ class Tabs extends Component {
       if (!landing.classList.contains("hidden")) {
         input.focus();
         updateSuggestion();
+        updateCaret();
         return;
       }
       landing.classList.remove("hidden");
       landing.removeAttribute("aria-hidden");
       input.focus();
       updateSuggestion();
+      updateCaret();
     };
 
     const isEditableTarget = (target) => {
@@ -893,9 +1037,7 @@ class Tabs extends Component {
       return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
     };
 
-    enterButton.addEventListener("click", () => {
-      showLinksView();
-    });
+    bindEnterButton(enterButton);
     document.addEventListener("keydown", (event) => {
       if (event.key !== "`") return;
       if (event.target && isEditableTarget(event.target)) {
@@ -916,6 +1058,7 @@ class Tabs extends Component {
             input.value = completed;
             input.setSelectionRange(input.value.length, input.value.length);
             updateSuggestion();
+            updateCaret();
             return;
           }
         }
@@ -931,6 +1074,7 @@ class Tabs extends Component {
         input.value = landingLinks[nextIndex].url;
         input.setSelectionRange(input.value.length, input.value.length);
         updateSuggestion();
+        updateCaret();
         return;
       }
 
@@ -940,7 +1084,47 @@ class Tabs extends Component {
       errorLine.hidden = true;
       errorLine.textContent = "";
       if (!value) {
+        return;
+      }
+
+      if (value.toLowerCase() === "/list") {
         showLinksView();
+        input.value = "";
+        updateSuggestion();
+        updateCaret();
+        return;
+      }
+
+      if (value.toLowerCase() === "/home") {
+        showHomeView();
+        input.value = "";
+        updateSuggestion();
+        updateCaret();
+        return;
+      }
+
+      if (value.toLowerCase() === "/help") {
+        if (terminalOutput) {
+          terminalOutput.classList.add("links-view");
+          terminalOutput.innerHTML = buildHelpMarkup();
+        }
+        input.value = "";
+        updateSuggestion();
+        updateCaret();
+        return;
+      }
+
+      if (value.toLowerCase() === "/weather") {
+        const scale = CONFIG.temperature?.scale || "C";
+        const weatherClient = new WeatherForecastClient(CONFIG.temperature?.location || "");
+        weatherClient.getForecast().then((forecast) => {
+          if (!terminalOutput) return;
+          terminalOutput.classList.add("links-view");
+          terminalOutput.innerHTML = buildWeatherMarkup(forecast, scale);
+        });
+        input.value = "";
+        updateSuggestion();
+        updateCaret();
         return;
       }
 
@@ -974,14 +1158,21 @@ class Tabs extends Component {
 
     input.addEventListener("input", updateSuggestion);
     input.addEventListener("focus", updateSuggestion);
+    input.addEventListener("input", updateCaret);
+    input.addEventListener("focus", updateCaret);
+    input.addEventListener("click", updateCaret);
+    input.addEventListener("keyup", updateCaret);
     input.addEventListener("blur", () => {
-      if (!suggestionLine) return;
-      suggestionLine.hidden = true;
+      if (ghostInput) {
+        ghostInput.hidden = true;
+      }
+      updateCaret();
     });
 
     landing.addEventListener("click", () => input.focus());
     input.focus();
     setLandingWeather();
     updateSuggestion();
+    updateCaret();
   }
 }
