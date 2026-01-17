@@ -1,0 +1,20 @@
+Mapping Table (OpenWeatherMap)
+- clear: day -> light_clouds.webp (fallback), night -> cold_twinkle.gif
+- clouds: day -> light_clouds.webp, night -> coldnightclouds.webp
+- rain: any -> landing_rain.gif
+- drizzle: any -> landing_rain.gif
+- thunderstorm: any -> lightning_1.webp
+- snow: any -> landing_snow.gif
+- atmosphere (mist/haze/fog/dust/etc.): any -> landing_fog.gif
+
+Clouds breakdown (descriptions)
+- few clouds -> partly cloudy -> light_clouds.webp
+- scattered clouds -> partly cloudy -> light_clouds.webp
+- broken clouds -> overcast -> light_clouds.webp
+- overcast clouds -> overcast -> light_clouds.webp
+
+Precip breakdown (descriptions)
+- light/moderate/heavy rain -> landing_rain.gif
+- shower rain -> landing_rain.gif
+- sleet / rain and snow -> landing_snow.gif (or rain if you prefer)
+- thunderstorm with rain/drizzle -> lightning_1.webp

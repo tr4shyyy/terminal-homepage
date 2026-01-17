@@ -13,3 +13,7 @@
 # secrets
 src/config/weather.key.js
 userconfig.js
+userconfig.local.json
+weather_mp4/
+AGENTS.md
+.idea/

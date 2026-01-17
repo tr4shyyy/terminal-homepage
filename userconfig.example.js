@@ -9,6 +9,7 @@ let palette = initThemeSystem(preferredLightTheme, preferredDarkTheme);
 
 const default_configuration = {
   overrideStorage: true,
+  username: "guest",
   temperature: {
     location: "Manchester",
     scale: "F",

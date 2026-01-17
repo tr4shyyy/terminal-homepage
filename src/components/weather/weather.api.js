@@ -19,7 +19,7 @@ class WeatherForecastClient {
 
   /**
    * Fetch and return the current weather for the configured location
-   * @returns {Promise<{temperature: number, condition: string}>} Weather data with temperature and condition
+   * @returns {Promise<{temperature: number, condition: string, description: string, clouds: number | null}>} Weather data with temperature and condition
    */
   async getWeather() {
     return await fetch(this.url)
@@ -32,10 +32,14 @@ class WeatherForecastClient {
         const temperature = Math.round(data.main.temp);
         // Extract and normalise weather condition
         const condition = data.weather[0].main.toLowerCase();
+        const description = (data.weather[0].description || "").toLowerCase();
+        const clouds = typeof data.clouds?.all === "number" ? data.clouds.all : null;
 
         return {
           temperature,
           condition,
+          description,
+          clouds,
         };
       })
       .catch((err) => console.warn("Weather API returned an error:", err));

@@ -155,6 +155,7 @@ class Tabs extends Component {
           --landing-accent-soft: #63C5EA;
           --landing-glow: #CF8EF4;
           --landing-ink: #F9F9F9;
+          --landing-sky: url("src/img/cold_twinkle.gif");
           position: absolute;
           inset: 0;
           display: grid;
@@ -171,7 +172,7 @@ class Tabs extends Component {
           position: absolute;
           inset: 0;
           background:
-            linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.3)),
+            linear-gradient(140deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.15)),
             repeating-linear-gradient(
               0deg,
               rgba(255, 255, 255, 0.03) 0px,
@@ -180,6 +181,7 @@ class Tabs extends Component {
               rgba(0, 0, 0, 0.02) 3px
             );
           mix-blend-mode: screen;
+          opacity: 0;
           pointer-events: none;
       }
 
@@ -187,8 +189,13 @@ class Tabs extends Component {
           content: "";
           position: absolute;
           inset: 0;
-          background: url("src/img/landing_rain.gif") center / cover no-repeat;
-          opacity: 0.3;
+          background-image: var(--landing-sky);
+          background-position: center;
+          background-size: cover;
+          background-repeat: no-repeat;
+          opacity: 1;
+          -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 82%);
+          mask-image: linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 82%);
           pointer-events: none;
       }
 
@@ -666,7 +673,7 @@ class Tabs extends Component {
             <div class="terminal-body">
               <div class="terminal-output" data-landing-output>
                 <div class="line">
-                  <span class="prompt">guest@launchpad</span>
+                  <span class="prompt" data-landing-prompt></span>
                   <span class="path">:~</span>$
                   <span class="command">boot --profile links</span>
                 </div>
@@ -680,7 +687,7 @@ class Tabs extends Component {
               </div>
               <div class="line output error" data-landing-error hidden></div>
               <div class="line">
-                <span class="prompt">guest@launchpad</span>
+                <span class="prompt" data-landing-prompt></span>
                 <span class="path">:~</span>$
                 <span class="terminal-input-wrap">
                   <input class="terminal-input terminal-input-ghost" type="text" tabindex="-1" aria-hidden="true" data-landing-ghost />
@@ -727,7 +734,20 @@ class Tabs extends Component {
 
     if (!landing || !enterButton || !input || !errorLine) return;
 
-    const landingLinks = (CONFIG.tabs || [])
+    const getPromptLabel = () => {
+      const username = (CONFIG.username || "").toString().trim() || "guest";
+      return `${username}@launchpad`;
+    };
+
+    const updatePromptLabel = () => {
+      const label = getPromptLabel();
+      const nodes = landing?.querySelectorAll("[data-landing-prompt]") || [];
+      nodes.forEach((node) => {
+        node.textContent = label;
+      });
+    };
+
+    const buildLandingLinks = (tabs) => (tabs || [])
       .flatMap((tab) => tab.categories || [])
       .flatMap((category) => category.links || [])
       .filter((link) => link && link.url)
@@ -736,7 +756,7 @@ class Tabs extends Component {
         url: link.url,
       }));
 
-    const shortcutCandidates = landingLinks
+    const buildShortcutCandidates = (links) => links
       .flatMap((link) => {
         const candidates = [];
         if (link.name) {
@@ -754,6 +774,14 @@ class Tabs extends Component {
         ...candidate,
         normalized: candidate.label.toLowerCase(),
       }));
+
+    let landingLinks = buildLandingLinks(CONFIG.tabs);
+    let shortcutCandidates = buildShortcutCandidates(landingLinks);
+
+    const refreshLandingCaches = () => {
+      landingLinks = buildLandingLinks(CONFIG.tabs);
+      shortcutCandidates = buildShortcutCandidates(landingLinks);
+    };
 
     const normalizeUrl = (value) => {
       const trimmed = value.trim();
@@ -850,7 +878,9 @@ class Tabs extends Component {
       enterButton = this.refs.landingEnter;
       bindEnterButton(enterButton);
       weatherLine = this.refs.landingWeather;
+      updatePromptLabel();
       setLandingWeather();
+      setLandingSky();
       input.focus();
       updateSuggestion();
       updateCaret();
@@ -876,17 +906,8 @@ class Tabs extends Component {
 
       const offsetSeconds = forecast.timezoneOffset || 0;
       const now = Math.floor(Date.now() / 1000);
-      const todayKey = new Date((now + offsetSeconds) * 1000)
-        .toISOString()
-        .slice(0, 10);
-
       const hourly = forecast.hourly
-        .filter((item) => {
-          const key = new Date((item.dt + offsetSeconds) * 1000)
-            .toISOString()
-            .slice(0, 10);
-          return key === todayKey;
-        })
+        .filter((item) => item.dt >= now)
         .slice(0, 12);
 
       const daily = forecast.daily.slice(1, 6);
@@ -928,6 +949,11 @@ class Tabs extends Component {
       lines.push(`<div class="line output link"><span class="link-name">/list</span><span class="link-url">-> Show all links in the terminal</span></div>`);
       lines.push(`<div class="line output link"><span class="link-name">/home</span><span class="link-url">-> Return to the landing terminal</span></div>`);
       lines.push(`<div class="line output link"><span class="link-name">/weather</span><span class="link-url">-> Show next 12 hours and 5-day forecast</span></div>`);
+      lines.push(`<div class="line output link"><span class="link-name">/background</span><span class="link-url">-> Cycle landing backgrounds</span></div>`);
+      lines.push(`<div class="line output link"><span class="link-name">/username</span><span class="link-url">-> Set prompt username: /username name</span></div>`);
+      lines.push(`<div class="line output link"><span class="link-name">/add</span><span class="link-url">-> Add a link: /add "url.com" -group</span></div>`);
+      lines.push(`<div class="line output link"><span class="link-name">/remove</span><span class="link-url">-> Remove a link: /remove "url.com" -group</span></div>`);
+      lines.push(`<div class="line output link"><span class="link-name">/edit</span><span class="link-url">-> Edit a link: /edit "url.com" -u "new.com", /edit "url.com" -g group, or /edit "url.com" -t "Title"</span></div>`);
       lines.push(`<div class="line output link"><span class="link-name">/help</span><span class="link-url">-> Show this command list</span></div>`);
       return lines.join("");
     };
@@ -982,6 +1008,222 @@ class Tabs extends Component {
       caret.style.opacity = "1";
     };
 
+    const parseAddCommand = (value) => {
+      const match = value.match(/^\/add\s+"([^"]+)"\s+-\s*(.+)$/i);
+      if (!match) return null;
+      const rawUrl = match[1].trim();
+      const group = match[2].trim();
+      if (!rawUrl || !group) return null;
+      return { rawUrl, group };
+    };
+
+    const parseRemoveCommand = (value) => {
+      const match = value.match(/^\/remove\s+"([^"]+)"\s+-\s*(.+)$/i);
+      if (!match) return null;
+      const rawUrl = match[1].trim();
+      const group = match[2].trim();
+      if (!rawUrl || !group) return null;
+      return { rawUrl, group };
+    };
+
+    const parseEditCommand = (value) => {
+      const match = value.match(/^\/edit\s+"([^"]+)"\s+-(u|g|t)\s+(.+)$/i);
+      if (!match) return null;
+      const rawTarget = match[1].trim();
+      const mode = match[2].toLowerCase();
+      let payload = match[3].trim();
+      if (payload.startsWith('"') && payload.endsWith('"')) {
+        payload = payload.slice(1, -1);
+      }
+      if (!rawTarget || !payload) return null;
+      return { rawTarget, mode, payload };
+    };
+
+    const parseUsernameCommand = (value) => {
+      const match = value.match(/^\/username\s+(.+)$/i);
+      if (!match) return null;
+      let name = match[1].trim();
+      if (!name) return null;
+      if ((name.startsWith('"') && name.endsWith('"')) || (name.startsWith("'") && name.endsWith("'"))) {
+        name = name.slice(1, -1).trim();
+      }
+      if (!name) return null;
+      return { name };
+    };
+
+    const inferLinkName = (url) => {
+      try {
+        const parsed = new URL(url);
+        return parsed.hostname.replace(/^www\./i, "") || url;
+      } catch (error) {
+        return url;
+      }
+    };
+
+    const addLinkToConfig = (url, group) => {
+      const tabs = Array.isArray(CONFIG.tabs) ? CONFIG.tabs : [];
+      if (!tabs.length) {
+        return { error: "No tabs configured yet. Add a tab in your config first." };
+      }
+
+      const normalizedGroup = group.toLowerCase();
+      const nextTabs = tabs.map((tab) => ({
+        ...tab,
+        categories: (tab.categories || []).map((category) => ({
+          ...category,
+          links: (category.links || []).slice(),
+        })),
+      }));
+
+      let targetTab = null;
+      let targetCategory = null;
+
+      for (const tab of nextTabs) {
+        const categories = tab.categories || [];
+        const match = categories.find((category) =>
+          (category.name || "").toLowerCase() === normalizedGroup
+        );
+        if (match) {
+          targetTab = tab;
+          targetCategory = match;
+          break;
+        }
+      }
+
+      if (!targetTab) {
+        targetTab = nextTabs[0];
+        targetCategory = { name: group, links: [] };
+        targetTab.categories = targetTab.categories || [];
+        targetTab.categories.push(targetCategory);
+      }
+
+      const exists = (targetCategory.links || []).some((link) => link?.url === url);
+      if (exists) {
+        return { error: "That URL already exists in the selected group." };
+      }
+
+      const name = inferLinkName(url);
+      targetCategory.links = targetCategory.links || [];
+      targetCategory.links.push({ name, url });
+      CONFIG.tabs = nextTabs;
+      refreshLandingCaches();
+
+      return {
+        tabName: targetTab.name || "links",
+        categoryName: targetCategory.name || group,
+        name,
+      };
+    };
+
+    const removeLinkFromConfig = (url, group) => {
+      const tabs = Array.isArray(CONFIG.tabs) ? CONFIG.tabs : [];
+      const normalizedGroup = group.toLowerCase();
+      const nextTabs = tabs.map((tab) => ({
+        ...tab,
+        categories: (tab.categories || []).map((category) => ({
+          ...category,
+          links: (category.links || []).slice(),
+        })),
+      }));
+
+      for (const tab of nextTabs) {
+        const categories = tab.categories || [];
+        const category = categories.find((item) =>
+          (item.name || "").toLowerCase() === normalizedGroup
+        );
+        if (!category) continue;
+        const links = category.links || [];
+        const index = links.findIndex((link) => link?.url === url);
+        if (index === -1) return { error: "URL not found in that group." };
+        const [removed] = links.splice(index, 1);
+        category.links = links;
+        CONFIG.tabs = nextTabs;
+        refreshLandingCaches();
+        return {
+          name: removed?.name || url,
+          categoryName: category.name || group,
+        };
+      }
+
+      return { error: "Group not found." };
+    };
+
+    const editLinkInConfig = (targetUrl, mode, payload) => {
+      const tabs = Array.isArray(CONFIG.tabs) ? CONFIG.tabs : [];
+      const nextTabs = tabs.map((tab) => ({
+        ...tab,
+        categories: (tab.categories || []).map((category) => ({
+          ...category,
+          links: (category.links || []).slice(),
+        })),
+      }));
+
+      for (const tab of nextTabs) {
+        const categories = tab.categories || [];
+        for (const category of categories) {
+          const links = category.links || [];
+          const index = links.findIndex((link) => link?.url === targetUrl);
+          if (index === -1) continue;
+
+          if (mode === "u") {
+            const nextUrl = normalizeUrl(payload);
+            if (!nextUrl) return { error: "Invalid URL. Usage: /edit \"url.com\" -u \"new.com\"" };
+            const link = links[index];
+            link.url = nextUrl;
+            link.name = inferLinkName(nextUrl);
+            category.links = links;
+            CONFIG.tabs = nextTabs;
+            refreshLandingCaches();
+            return {
+              categoryName: category.name || "links",
+              name: link.name || nextUrl,
+            };
+          }
+
+          if (mode === "t") {
+            const nextTitle = payload.trim();
+            if (!nextTitle) return { error: "Invalid title. Usage: /edit \"url.com\" -t \"New Title\"" };
+            const link = links[index];
+            link.name = nextTitle;
+            category.links = links;
+            CONFIG.tabs = nextTabs;
+            refreshLandingCaches();
+            return {
+              categoryName: category.name || "links",
+              name: link.name || targetUrl,
+            };
+          }
+
+          if (mode === "g") {
+            const targetGroup = payload.trim();
+            if (!targetGroup) return { error: "Invalid group. Usage: /edit \"url.com\" -g group" };
+            const normalizedGroup = targetGroup.toLowerCase();
+            let destination = categories.find((item) =>
+              (item.name || "").toLowerCase() === normalizedGroup
+            );
+            if (!destination) {
+              destination = { name: targetGroup, links: [] };
+              tab.categories = tab.categories || [];
+              tab.categories.push(destination);
+            }
+            const [moved] = links.splice(index, 1);
+            destination.links = destination.links || [];
+            destination.links.push(moved);
+            category.links = links;
+            CONFIG.tabs = nextTabs;
+            refreshLandingCaches();
+            return {
+              from: category.name || "links",
+              to: destination.name || targetGroup,
+              name: moved?.name || targetUrl,
+            };
+          }
+        }
+      }
+
+      return { error: "URL not found." };
+    };
+
     const setLandingWeather = async () => {
       const currentWeatherLine = this.refs.landingWeather;
       if (!currentWeatherLine || typeof currentWeatherLine === "string") return;
@@ -1008,6 +1250,92 @@ class Tabs extends Component {
       } catch (error) {
         currentWeatherLine.textContent = "Weather unavailable.";
       }
+    };
+
+    const setLandingSky = async () => {
+      if (!landing) return;
+      const location = CONFIG.temperature?.location;
+      if (!location) return;
+
+      try {
+        const weatherClient = new WeatherForecastClient(location);
+        const [forecast, weather] = await Promise.all([
+          weatherClient.getForecast(),
+          weatherClient.getWeather(),
+        ]);
+        const today = forecast?.daily?.[0];
+        if (!today || !today.sunrise || !today.sunset) return;
+        const now = Math.floor(Date.now() / 1000);
+        const isSunUp = now >= today.sunrise && now < today.sunset;
+        const condition = weather?.condition || "";
+        const description = weather?.description || "";
+        const clouds = weather?.clouds;
+        const isPartlyCloudy = (
+          condition === "clouds" && (
+            description.includes("few clouds") ||
+            description.includes("scattered clouds") ||
+            description.includes("partly cloudy")
+          )
+        ) || (typeof clouds === "number" && clouds > 10 && clouds < 60);
+        const isClear = condition === "clear" || description.includes("clear");
+        const isThunderstorm = condition === "thunderstorm" || description.includes("thunder");
+        const isCloudy = condition === "clouds" || description.includes("cloud");
+        const isPrecip = (
+          condition === "rain" ||
+          condition === "drizzle" ||
+          condition === "snow" ||
+          description.includes("rain") ||
+          description.includes("drizzle") ||
+          description.includes("snow") ||
+          description.includes("sleet")
+        );
+        const skyUrl = isThunderstorm
+          ? 'url("src/img/lightning_1.webp")'
+          : isPrecip
+            ? 'url("src/img/landing_rain.gif")'
+            : isSunUp
+              ? 'url("src/img/light_clouds.webp")'
+              : (
+                isCloudy || isPartlyCloudy
+                  ? 'url("src/img/coldnightclouds.webp")'
+                  : 'url("src/img/cold_twinkle.gif")'
+              );
+        landing.style.setProperty("--landing-sky", skyUrl);
+      } catch (error) {
+        return;
+      }
+    };
+
+    const landingBackgrounds = [
+      { name: "storm", url: 'url("src/img/lightning_1.webp")' },
+      { name: "clouds", url: 'url("src/img/light_clouds.webp")' },
+      { name: "night-clear", url: 'url("src/img/cold_twinkle.gif")' },
+      { name: "night-clouds", url: 'url("src/img/coldnightclouds.webp")' },
+      { name: "rain", url: 'url("src/img/landing_rain.gif")' },
+    ];
+    let manualBackgroundIndex = -1;
+
+    const getCurrentBackgroundIndex = () => {
+      if (!landing) return -1;
+      const current =
+        landing.style.getPropertyValue("--landing-sky") ||
+        window.getComputedStyle(landing).getPropertyValue("--landing-sky");
+      const normalized = current.replace(/\s+/g, "");
+      return landingBackgrounds.findIndex(
+        (background) => background.url.replace(/\s+/g, "") === normalized
+      );
+    };
+
+    const cycleLandingBackground = () => {
+      if (!landingBackgrounds.length || !landing) return null;
+      if (manualBackgroundIndex < 0) {
+        const currentIndex = getCurrentBackgroundIndex();
+        manualBackgroundIndex = currentIndex >= 0 ? currentIndex : 0;
+      }
+      manualBackgroundIndex = (manualBackgroundIndex + 1) % landingBackgrounds.length;
+      const background = landingBackgrounds[manualBackgroundIndex];
+      landing.style.setProperty("--landing-sky", background.url);
+      return background;
     };
 
     const dismiss = () => {
@@ -1050,6 +1378,17 @@ class Tabs extends Component {
     });
 
     input.addEventListener("keydown", (event) => {
+      if (event.key === "PageUp" || event.key === "PageDown") {
+        const scrollTarget = terminalOutput;
+        if (scrollTarget && scrollTarget.scrollHeight > scrollTarget.clientHeight) {
+          event.preventDefault();
+          const direction = event.key === "PageUp" ? -1 : 1;
+          const delta = Math.max(scrollTarget.clientHeight - 24, 100);
+          scrollTarget.scrollBy({ top: direction * delta, behavior: "smooth" });
+        }
+        return;
+      }
+
       if (event.key === "Tab") {
         event.preventDefault();
         if (!event.shiftKey && ghostInput && !ghostInput.hidden) {
@@ -1114,6 +1453,150 @@ class Tabs extends Component {
         return;
       }
 
+      if (value.toLowerCase() === "/background") {
+        const background = cycleLandingBackground();
+        if (terminalOutput && background) {
+          terminalOutput.classList.add("links-view");
+          terminalOutput.innerHTML = `<div class="line output">Background set to ${escapeHtml(background.name)}.</div>`;
+        }
+        input.value = "";
+        updateSuggestion();
+        updateCaret();
+        return;
+      }
+
+      const usernamePayload = parseUsernameCommand(value);
+      if (usernamePayload) {
+        CONFIG.username = usernamePayload.name;
+        updatePromptLabel();
+        if (terminalOutput) {
+          terminalOutput.classList.add("links-view");
+          terminalOutput.innerHTML = `<div class="line output">Username set to ${escapeHtml(usernamePayload.name)}.</div>`;
+        }
+        input.value = "";
+        updateSuggestion();
+        updateCaret();
+        return;
+      }
+
+      const addPayload = parseAddCommand(value);
+      if (addPayload) {
+        const url = normalizeUrl(addPayload.rawUrl);
+        if (!url) {
+          errorLine.textContent = 'Invalid URL. Usage: /add "url.com" -group';
+          errorLine.hidden = false;
+          input.focus();
+          return;
+        }
+
+        const result = addLinkToConfig(url, addPayload.group);
+        if (result.error) {
+          errorLine.textContent = result.error;
+          errorLine.hidden = false;
+          input.focus();
+          return;
+        }
+
+        if (terminalOutput) {
+          terminalOutput.classList.add("links-view");
+          terminalOutput.innerHTML = `<div class="line output">Added ${escapeHtml(result.name)} to ${escapeHtml(result.tabName)} / ${escapeHtml(result.categoryName)}.</div>`;
+        }
+        input.value = "";
+        updateSuggestion();
+        updateCaret();
+        return;
+      }
+
+      if (value.toLowerCase().startsWith("/add")) {
+        errorLine.textContent = 'Invalid /add syntax. Usage: /add "url.com" -group';
+        errorLine.hidden = false;
+        input.focus();
+        return;
+      }
+
+      const removePayload = parseRemoveCommand(value);
+      if (removePayload) {
+        const url = normalizeUrl(removePayload.rawUrl);
+        if (!url) {
+          errorLine.textContent = 'Invalid URL. Usage: /remove "url.com" -group';
+          errorLine.hidden = false;
+          input.focus();
+          return;
+        }
+
+        const result = removeLinkFromConfig(url, removePayload.group);
+        if (result.error) {
+          errorLine.textContent = result.error;
+          errorLine.hidden = false;
+          input.focus();
+          return;
+        }
+
+        if (terminalOutput) {
+          terminalOutput.classList.add("links-view");
+          terminalOutput.innerHTML = `<div class="line output">Removed ${escapeHtml(result.name)} from ${escapeHtml(result.categoryName)}.</div>`;
+        }
+        input.value = "";
+        updateSuggestion();
+        updateCaret();
+        return;
+      }
+
+      if (value.toLowerCase().startsWith("/remove")) {
+        errorLine.textContent = 'Invalid /remove syntax. Usage: /remove "url.com" -group';
+        errorLine.hidden = false;
+        input.focus();
+        return;
+      }
+
+      const editPayload = parseEditCommand(value);
+      if (editPayload) {
+        const targetUrl = normalizeUrl(editPayload.rawTarget);
+        if (!targetUrl) {
+          errorLine.textContent = 'Invalid URL. Usage: /edit "url.com" -u "new.com", /edit "url.com" -g group, or /edit "url.com" -t "Title"';
+          errorLine.hidden = false;
+          input.focus();
+          return;
+        }
+
+        const result = editLinkInConfig(targetUrl, editPayload.mode, editPayload.payload);
+        if (result.error) {
+          errorLine.textContent = result.error;
+          errorLine.hidden = false;
+          input.focus();
+          return;
+        }
+
+        if (terminalOutput) {
+          terminalOutput.classList.add("links-view");
+          if (editPayload.mode === "g") {
+            terminalOutput.innerHTML = `<div class="line output">Moved ${escapeHtml(result.name)} from ${escapeHtml(result.from)} to ${escapeHtml(result.to)}.</div>`;
+          } else if (editPayload.mode === "t") {
+            terminalOutput.innerHTML = `<div class="line output">Renamed link in ${escapeHtml(result.categoryName)} to ${escapeHtml(result.name)}.</div>`;
+          } else {
+            terminalOutput.innerHTML = `<div class="line output">Updated ${escapeHtml(result.name)} in ${escapeHtml(result.categoryName)}.</div>`;
+          }
+        }
+        input.value = "";
+        updateSuggestion();
+        updateCaret();
+        return;
+      }
+
+      if (value.toLowerCase().startsWith("/edit")) {
+        errorLine.textContent = 'Invalid /edit syntax. Usage: /edit "url.com" -u "new.com", /edit "url.com" -g group, or /edit "url.com" -t "Title"';
+        errorLine.hidden = false;
+        input.focus();
+        return;
+      }
+
+      if (value.toLowerCase().startsWith("/username")) {
+        errorLine.textContent = "Invalid /username syntax. Usage: /username name";
+        errorLine.hidden = false;
+        input.focus();
+        return;
+      }
+
       if (value.toLowerCase() === "/weather") {
         const scale = CONFIG.temperature?.scale || "C";
         const weatherClient = new WeatherForecastClient(CONFIG.temperature?.location || "");
@@ -1125,6 +1608,13 @@ class Tabs extends Component {
         input.value = "";
         updateSuggestion();
         updateCaret();
+        return;
+      }
+
+      if (value.startsWith("/")) {
+        errorLine.textContent = "Command not found. Use /help for the list of available commands.";
+        errorLine.hidden = false;
+        input.focus();
         return;
       }
 
@@ -1171,7 +1661,9 @@ class Tabs extends Component {
 
     landing.addEventListener("click", () => input.focus());
     input.focus();
+    updatePromptLabel();
     setLandingWeather();
+    setLandingSky();
     updateSuggestion();
     updateCaret();
   }

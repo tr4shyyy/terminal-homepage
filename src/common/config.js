@@ -3,6 +3,8 @@ class Config {
   defaults = {
     // Whether to override localStorage with config values
     overrideStorage: false,
+    // Username shown in the landing terminal prompt
+    username: "guest",
     temperature: {
       // Default city for weather display
       location: "London",
@@ -114,12 +116,15 @@ class Config {
 
   /**
    * Determines whether localStorage can be overridden for a given setting
-   * If the setting is for the tabs section, always override
+   * Tabs prefer stored values once present, to support runtime edits
    * @param {string} setting - The setting name to check
    * @returns {boolean} Whether the setting can override storage
    */
   canOverrideStorage(setting) {
-    return setting in this.config && (this.config.overrideStorage || setting === "tabs");
+    if (setting === "tabs") {
+      return setting in this.config && !this.storage.hasValue("tabs");
+    }
+    return setting in this.config && this.config.overrideStorage;
   }
 
   /**
@@ -150,7 +155,23 @@ class Config {
    * @returns {void}
    */
   save() {
-    this.storage.save(stringify(this));
+    const payload = stringify(this);
+    this.storage.save(payload);
+    this.persistToDisk(payload);
+  }
+
+  /**
+   * Persist configuration to disk when a local endpoint is available
+   * @param {string} payload - Serialized configuration
+   * @returns {void}
+   */
+  persistToDisk(payload) {
+    const endpoint = this.config?.persistEndpoint || "save_config.php";
+    fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+    }).catch(() => {});
   }
 
   /**
